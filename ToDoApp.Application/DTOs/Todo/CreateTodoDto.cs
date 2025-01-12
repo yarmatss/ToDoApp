@@ -6,11 +6,16 @@ namespace ToDoApp.Application.DTOs.Todo;
 public class CreateTodoDto
 {
     [MaxLength(200)]
-    public required string Title { get; set; }
+    [Required]
+    public string Title { get; set; } = string.Empty;
 
     [MaxLength(1000)]
     public string Description { get; set; } = string.Empty;
     public DateTime? Deadline { get; set; }
-    public required Priority Priority { get; set; }
-    public required Guid CategoryId { get; set; }
+
+    [Required]
+    public Priority Priority { get; set; }
+
+    [Required]
+    public Guid CategoryId { get; set; }
 }

@@ -57,6 +57,9 @@ public class TodoService : ITodoService
         if (parameters.IsCompleted.HasValue)
             query = query.Where(x => x.IsCompleted == parameters.IsCompleted);
 
+        if (parameters.Priority.HasValue)
+            query = query.Where(x => x.Priority == parameters.Priority.Value);
+
         // Sortowanie
         query = parameters.SortBy.ToLower() switch
         {
@@ -108,6 +111,17 @@ public class TodoService : ITodoService
             throw new NotFoundException("Todo not found");
 
         UpdateEntity(todo, dto);
+        
+        if (dto.CategoryId.HasValue)
+        {
+            var categoryExists = await _context.Categories
+                .AnyAsync(c => c.Id == dto.CategoryId && c.UserId == userId);
+
+            if (!categoryExists)
+                throw new BadRequestException("Selected category does not exist");
+            todo.CategoryId = dto.CategoryId.Value;
+        }
+
         await _context.SaveChangesAsync();
 
         return await GetByIdAsync(id, userId);
