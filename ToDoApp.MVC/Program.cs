@@ -5,7 +5,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
 {
@@ -18,6 +17,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath = "/Auth/Login";
         options.LogoutPath = "/Auth/Logout";
     });
+
+builder.Services.AddSingleton<IAuthStateService, AuthStateService>();
 
 var app = builder.Build();
 

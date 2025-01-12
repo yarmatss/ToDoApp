@@ -10,10 +10,12 @@ namespace ToDoApp.MVC.Controllers;
 public class AuthController : Controller
 {
     private readonly IApiClient _apiClient;
+    private readonly IAuthStateService _authState;
 
-    public AuthController(IApiClient apiClient)
+    public AuthController(IApiClient apiClient, IAuthStateService authState)
     {
         _apiClient = apiClient;
+        _authState = authState;
     }
 
     [HttpGet]
@@ -58,6 +60,7 @@ public class AuthController : Controller
         {
             var result = await _apiClient.LoginAsync(model);
             await SetAuthenticationCookies(result);
+            _authState.SetTokens(result.AccessToken, result.RefreshToken);
             return Redirect(returnUrl ?? "/");
         }
         catch

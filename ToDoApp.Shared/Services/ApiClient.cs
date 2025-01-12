@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using ToDoApp.Application.Common.Models;
@@ -12,32 +11,26 @@ namespace ToDoApp.Shared.Services;
 public class ApiClient : IApiClient
 {
     private readonly HttpClient _httpClient;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAuthStateService _authState;
 
-    public ApiClient(HttpClient httpClient, IHttpContextAccessor httpContextAccessor)
+    public ApiClient(HttpClient httpClient, IAuthStateService authState)
     {
         _httpClient = httpClient;
-        _httpContextAccessor = httpContextAccessor;
+        _authState = authState;
     }
 
     private async Task AddJwtTokenAsync()
     {
-        var token = _httpContextAccessor.HttpContext?.Request.Cookies["JWTToken"];
-        if (!string.IsNullOrEmpty(token))
+        if (!string.IsNullOrEmpty(_authState.AccessToken))
         {
-            var jwtToken = new JwtSecurityTokenHandler().ReadJwtToken(token);
-            if (jwtToken.ValidTo < DateTime.UtcNow)
+            var jwtToken = new JwtSecurityTokenHandler().ReadJwtToken(_authState.AccessToken);
+            if (jwtToken.ValidTo <= DateTime.UtcNow.AddMinutes(-5) && !string.IsNullOrEmpty(_authState.RefreshToken))
             {
-                var refreshToken = _httpContextAccessor.HttpContext?.Request.Cookies["RefreshToken"];
-                if (!string.IsNullOrEmpty(refreshToken))
-                {
-                    var newToken = await RefreshTokenAsync(refreshToken);
-                    _httpContextAccessor.HttpContext?.Response.Cookies.Append("JWTToken", newToken.AccessToken);
-                    _httpContextAccessor.HttpContext?.Response.Cookies.Append("RefreshToken", newToken.RefreshToken);
-                    token = newToken.AccessToken;
-                }
+                var newToken = await RefreshTokenAsync(_authState.RefreshToken);
+                _authState.SetTokens(newToken.AccessToken, newToken.RefreshToken);
             }
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", _authState.AccessToken);
         }
     }
 
@@ -46,21 +39,30 @@ public class ApiClient : IApiClient
     {
         var response = await _httpClient.PostAsJsonAsync("api/Auth/login", dto);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<TokenDto>();
+        var tokenDto = await response.Content.ReadFromJsonAsync<TokenDto>();
+        if (tokenDto is not null)
+            _authState.SetTokens(tokenDto.AccessToken, tokenDto.RefreshToken);
+        return tokenDto;
     }
 
     public async Task<TokenDto> RegisterAsync(RegisterDto dto)
     {
         var response = await _httpClient.PostAsJsonAsync("api/Auth/register", dto);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<TokenDto>();
+        var tokenDto = await response.Content.ReadFromJsonAsync<TokenDto>();
+        if (tokenDto is not null)
+            _authState.SetTokens(tokenDto.AccessToken, tokenDto.RefreshToken);
+        return tokenDto;
     }
 
     public async Task<TokenDto> RefreshTokenAsync(string refreshToken)
     {
-        var response = await _httpClient.PostAsJsonAsync("api/Auth/refresh", new { RefreshToken = refreshToken });
+        var response = await _httpClient.PostAsJsonAsync("api/Auth/refresh", new RefreshTokenDto { RefreshToken = refreshToken });
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<TokenDto>();
+        var tokenDto = await response.Content.ReadFromJsonAsync<TokenDto>();
+        if (tokenDto is not null)
+            _authState.SetTokens(tokenDto.AccessToken, tokenDto.RefreshToken);
+        return tokenDto;
     }
 
     // Todo methods
