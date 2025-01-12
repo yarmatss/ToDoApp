@@ -10,7 +10,7 @@ public interface IApiClient
     // Auth
     Task<TokenDto> LoginAsync(LoginDto dto);
     Task<TokenDto> RegisterAsync(RegisterDto dto);
-    Task<TokenDto> RefreshTokenAsync(string refreshToken);
+    Task<TokenDto> RefreshTokenAsync(RefreshTokenDto request);
 
     // Todo
     Task<PagedList<TodoDto>> GetTodosAsync(TodoParameters parameters);

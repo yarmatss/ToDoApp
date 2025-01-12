@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using ToDoApp.MVC.Auth;
 using ToDoApp.Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -6,19 +7,34 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IAuthClient, AuthClient>();
+
+builder.Services.AddTransient<JwtAuthenticationHandler>();
+
+// Register a named HttpClient for AuthClient without JwtAuthenticationHandler
+builder.Services.AddHttpClient("AuthClient", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]!);
+    client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+});
+
+// Register the main ApiClient with JwtAuthenticationHandler
 builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]!);
-});
+})
+.AddHttpMessageHandler<JwtAuthenticationHandler>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.LoginPath = "/Auth/Login";
-        options.LogoutPath = "/Auth/Logout";
-    });
-
-builder.Services.AddSingleton<IAuthStateService, AuthStateService>();
+       .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+       {
+           options.LoginPath = "/Auth/Login";
+           options.LogoutPath = "/Auth/Logout";
+           options.AccessDeniedPath = "/Auth/AccessDenied";
+           options.ExpireTimeSpan = TimeSpan.FromHours(1);
+           options.SlidingExpiration = true;
+       });
 
 var app = builder.Build();
 
@@ -26,7 +42,6 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 

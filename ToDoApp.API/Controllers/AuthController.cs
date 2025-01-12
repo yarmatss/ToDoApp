@@ -32,7 +32,7 @@ public class AuthController : BaseController
     [HttpPost("refresh")]
     public async Task<ActionResult<TokenDto>> RefreshToken([FromBody] RefreshTokenDto request)
     {
-        var result = await _authService.RefreshTokenAsync(request.RefreshToken);
+        var result = await _authService.RefreshTokenAsync(request);
         return Ok(result);
     }
 }

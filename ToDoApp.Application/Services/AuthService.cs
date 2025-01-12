@@ -122,10 +122,10 @@ public class AuthService : IAuthService
         return BCrypt.Net.BCrypt.Verify(password, hash);
     }
 
-    public async Task<TokenDto> RefreshTokenAsync(string refreshToken)
+    public async Task<TokenDto> RefreshTokenAsync(RefreshTokenDto request)
     {
         var user = await _context.Users
-            .FirstOrDefaultAsync(x => x.RefreshToken == refreshToken);
+            .FirstOrDefaultAsync(x => x.RefreshToken == request.RefreshToken);
 
         if (user == null || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
             throw new UnauthorizedException("Invalid refresh token");

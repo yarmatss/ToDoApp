@@ -10,12 +10,12 @@ namespace ToDoApp.MVC.Controllers;
 public class AuthController : Controller
 {
     private readonly IApiClient _apiClient;
-    private readonly IAuthStateService _authState;
+    private readonly IAuthClient _authClient;
 
-    public AuthController(IApiClient apiClient, IAuthStateService authState)
+    public AuthController(IApiClient apiClient, IAuthClient authClient)
     {
         _apiClient = apiClient;
-        _authState = authState;
+        _authClient = authClient;
     }
 
     [HttpGet]
@@ -33,7 +33,25 @@ public class AuthController : Controller
         try
         {
             var result = await _apiClient.RegisterAsync(model);
-            await SetAuthenticationCookies(result);
+            await _authClient.SetTokensAsync(result.AccessToken, result.RefreshToken);
+
+            // Create user claims
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, model.Email)
+                // Add additional claims if necessary
+            };
+
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTime.UtcNow.AddHours(1)
+                });
+
             return RedirectToAction("Index", "Todo");
         }
         catch
@@ -59,8 +77,27 @@ public class AuthController : Controller
         try
         {
             var result = await _apiClient.LoginAsync(model);
-            await SetAuthenticationCookies(result);
-            _authState.SetTokens(result.AccessToken, result.RefreshToken);
+
+            // Store tokens using AuthClient
+            await _authClient.SetTokensAsync(result.AccessToken, result.RefreshToken);
+
+            // Create user claims
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, model.Email)
+                // Add additional claims if necessary
+            };
+
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTime.UtcNow.AddHours(1)
+                });
+
             return Redirect(returnUrl ?? "/");
         }
         catch
@@ -74,45 +111,7 @@ public class AuthController : Controller
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        foreach (var cookie in Request.Cookies.Keys)
-        {
-            Response.Cookies.Delete(cookie);
-        }
+        await _authClient.ClearTokensAsync();
         return RedirectToAction("Login");
-    }
-
-    private async Task SetAuthenticationCookies(TokenDto token)
-    {
-        var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, token.AccessToken),
-                    new Claim("RefreshToken", token.RefreshToken)
-                };
-
-        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        var principal = new ClaimsPrincipal(identity);
-
-        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
-            new AuthenticationProperties
-            {
-                IsPersistent = true,
-                ExpiresUtc = DateTime.UtcNow.AddHours(1)
-            });
-
-        Response.Cookies.Append("JWTToken", token.AccessToken, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTime.UtcNow.AddHours(1)
-        });
-
-        Response.Cookies.Append("RefreshToken", token.RefreshToken, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTime.UtcNow.AddDays(7)
-        });
     }
 }
