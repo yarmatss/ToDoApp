@@ -1,0 +1,90 @@
+﻿@page "/todo/create"
+@inject IApiClient ApiClient
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title mb-4">Nowe zadanie</h3>
+                    <EditForm Model="@todo" OnValidSubmit="HandleSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
+                        <div class="mb-3">
+                            <label class="form-label">Tytuł</label>
+                            <InputText @bind-Value="todo.Title" class="form-control" />
+                            <ValidationMessage For="@(() => todo.Title)" class="text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Opis</label>
+                            <InputTextArea @bind-Value="todo.Description" class="form-control" rows="3" />
+                            <ValidationMessage For="@(() => todo.Description)" class="text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Termin</label>
+                            <InputDate @bind-Value="todo.Deadline" class="form-control" />
+                            <ValidationMessage For="@(() => todo.Deadline)" class="text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Kategoria</label>
+                            <InputSelect @bind-Value="todo.CategoryId" class="form-select">
+                                <option value="">-- Wybierz kategorię --</option>
+                                @if (categories != null)
+                                {
+                                    @foreach (var category in categories)
+                                    {
+                                        <option value="@category.Id">@category.Name</option>
+                                    }
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => todo.CategoryId)" class="text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Priorytet</label>
+                            <InputSelect @bind-Value="todo.Priority" class="form-select">
+                                @foreach (var priority in Enum.GetValues(typeof(Priority)))
+                                {
+                                    <option value="@priority">@priority</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => todo.Priority)" class="text-danger" />
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <button type="button" @onclick="GoBack" class="btn btn-outline-secondary">Powrót</button>
+                            <button type="submit" class="btn btn-primary">Zapisz</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private CreateTodoDto todo = new();
+    private IEnumerable<CategoryDto> categories;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await ApiClient.GetCategoriesAsync();
+    }
+
+    private async Task HandleSubmit()
+    {
+        await ApiClient.CreateTodoAsync(todo);
+        NavigationManager.NavigateTo("/");
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}

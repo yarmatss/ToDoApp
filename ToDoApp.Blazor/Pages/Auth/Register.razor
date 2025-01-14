@@ -1,0 +1,41 @@
+﻿@page "/register"
+@inject IApiClient ApiClient
+@inject IAuthClient AuthClient
+@inject NavigationManager NavigationManager
+
+<AuthLayout Title="Rejestracja">
+    <EditForm Model="@registerDto" OnValidSubmit="HandleRegister">
+        <DataAnnotationsValidator />
+        <div class="form-group mb-3">
+            <label>Email:</label>
+            <InputText @bind-Value="registerDto.Email" class="form-control" />
+            <ValidationMessage For="@(() => registerDto.Email)" />
+        </div>
+        <div class="form-group mb-3">
+            <label>Hasło:</label>
+            <InputText type="password" @bind-Value="registerDto.Password" class="form-control" />
+            <ValidationMessage For="@(() => registerDto.Password)" />
+        </div>
+        <div class="form-group mb-3">
+            <label>Potwierdź hasło:</label>
+            <InputText type="password" @bind-Value="registerDto.ConfirmPassword" class="form-control" />
+            <ValidationMessage For="@(() => registerDto.ConfirmPassword)" />
+        </div>
+        <button type="submit" class="btn btn-primary">Zarejestruj</button>
+        <NavLink href="login" class="btn btn-link">Zaloguj się</NavLink>
+    </EditForm>
+</AuthLayout>
+
+@code {
+    private RegisterDto registerDto = new();
+
+    private async Task HandleRegister()
+    {
+        var result = await ApiClient.RegisterAsync(registerDto);
+        if (result != null)
+        {
+            await AuthClient.SetTokensAsync(result.AccessToken, result.RefreshToken);
+            NavigationManager.NavigateTo("/");
+        }
+    }
+}

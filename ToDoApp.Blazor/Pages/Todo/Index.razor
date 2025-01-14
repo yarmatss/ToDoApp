@@ -1,0 +1,252 @@
+﻿@page "/"
+@inject IApiClient ApiClient
+@inject IJSRuntime JsRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Task List</h2>
+
+        <div class="d-flex gap-2">
+            <NavLink href="/category/create" class="btn btn-outline-primary">
+                <i class="bi bi-folder-plus"></i> Add New Category
+            </NavLink>
+            <NavLink href="/todo/create" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> Add New Todo
+            </NavLink>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <EditForm Model="@parameters" OnSubmit="HandleSubmit">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="SearchPhrase" class="form-label">Search</label>
+                        <InputText id="SearchPhrase" @bind-Value="parameters.SearchPhrase" class="form-control" placeholder="Search..." />
+                    </div>
+                    <div class="col-md-3">
+                        <label for="CategoryId" class="form-label">Category</label>
+                        <InputSelect id="CategoryId" @bind-Value="parameters.CategoryId" class="form-select">
+                            <option value="">All Categories</option>
+                            @if (categories != null)
+                            {
+                                @foreach (var category in categories)
+                                {
+                                    <option value="@category.Id">@category.Name</option>
+                                }
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="IsCompleted" class="form-label">Status</label>
+                        <InputSelect id="IsCompleted" @bind-Value="parameters.IsCompleted" class="form-select">
+                            <option value="">All Statuses</option>
+                            <option value="true">Completed</option>
+                            <option value="false">In Progress</option>
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="Priority" class="form-label">Priority</label>
+                        <InputSelect id="Priority" @bind-Value="parameters.Priority" class="form-select">
+                            <option value="">All</option>
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                            <option value="Critical">Critical</option>
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="DeadlineFrom" class="form-label">From Date</label>
+                        <InputDate id="DeadlineFrom" @bind-Value="parameters.DeadlineFrom" class="form-control" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="DeadlineTo" class="form-label">To Date</label>
+                        <InputDate id="DeadlineTo" @bind-Value="parameters.DeadlineTo" class="form-control" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="SortBy" class="form-label">Sort by</label>
+                        <InputSelect id="SortBy" @bind-Value="parameters.SortBy" class="form-select">
+                            <option value="CreatedAt">Data utworzenia</option>
+                            <option value="Deadline">Deadline</option>
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="SortDescending" class="form-label">Sort Direction</label>
+                        <InputSelect id="SortDescending" @bind-Value="parameters.SortDescending" class="form-select">
+                            <option value="true">Descending</option>
+                            <option value="false">Ascending</option>
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="PageSize" class="form-label">Page Size</label>
+                        <InputSelect id="PageSize" @bind-Value="parameters.PageSize" class="form-select">
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-md-3 align-self-end">
+                        <button type="submit" class="btn btn-primary w-100">Filter</button>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+
+    @if (loading)
+    {
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (todos?.Items == null || !todos.Items.Any())
+    {
+        <div class="alert alert-warning">
+            No tasks to display.
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var todo in todos.Items)
+            {
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">@todo.Title</h5>
+                            <p class="card-text">@todo.Description</p>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                @if (todo.Deadline.HasValue)
+                                {
+                                    <small class="text-muted">Deadline: @todo.Deadline.Value.ToString("g")</small>
+                                }
+                                <span class="badge @(todo.IsCompleted ? "bg-success" : "bg-warning") ms-auto">
+                                    @(todo.IsCompleted ? "Completed" : "In Progress")
+                                </span>
+                            </div>
+                            <div class="mt-auto d-flex gap-2">
+                                <NavLink href="@($"/todo/{todo.Id}")" class="btn btn-sm btn-outline-info">Details</NavLink>
+                                <button @onclick="() => ToggleTodo(todo.Id)" class="btn btn-sm btn-outline-primary">
+                                    @(todo.IsCompleted ? "Restore" : "Complete")
+                                </button>
+                                <NavLink href="@($"/todo/edit/{todo.Id}")" class="btn btn-sm btn-outline-secondary">Edit</NavLink>
+                                <button @onclick="() => DeleteTodo(todo.Id)" class="btn btn-sm btn-outline-danger">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (todos.TotalPages > 1)
+        {
+            <nav>
+                <ul class="pagination justify-content-center">
+                    @for (int i = 1; i <= todos.TotalPages; i++)
+                    {
+                        var pageNumber = i;
+                        <li class="page-item @(i == todos.PageNumber ? "active" : "")">
+                            <button class="page-link" @onclick="() => LoadPage(pageNumber)">@i</button>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        }
+    }
+</div>
+
+@code {
+    private PagedList<TodoDto> todos;
+    private IEnumerable<CategoryDto> categories;
+    private TodoParameters parameters = new()
+        {
+            PageSize = 10,
+            SortBy = "CreatedAt",
+            SortDescending = true
+        };
+    private bool loading = true;
+
+    private async Task LoadCategories()
+    {
+        categories = await ApiClient.GetCategoriesAsync();
+    }
+
+    private async Task LoadTodos()
+    {
+        loading = true;
+        StateHasChanged();
+
+        todos = await ApiClient.GetTodosAsync(parameters);
+
+        loading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadPage(int pageNumber)
+    {
+        parameters.PageNumber = pageNumber;
+        await LoadTodos();
+    }
+
+    private async Task ToggleTodo(Guid id)
+    {
+        await ApiClient.ToggleCompleteAsync(id);
+        await LoadTodos();
+    }
+
+    private async Task DeleteTodo(Guid id)
+    {
+        if (await JsRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this task?"))
+        {
+            await ApiClient.DeleteTodoAsync(id);
+            await LoadTodos();
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        var queryParams = new Dictionary<string, string>
+            {
+                ["searchPhrase"] = parameters.SearchPhrase ?? "",
+                ["categoryId"] = parameters.CategoryId?.ToString() ?? "",
+                ["isCompleted"] = parameters.IsCompleted?.ToString() ?? "",
+                ["sortDescending"] = parameters.SortDescending.ToString(),
+                ["pageNumber"] = parameters.PageNumber.ToString(),
+                ["pageSize"] = parameters.PageSize.ToString()
+            };
+
+        var uri = QueryHelpers.AddQueryString("/", queryParams);
+        NavigationManager.NavigateTo(uri);
+        await LoadTodos();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("isCompleted", out var isCompleted))
+        {
+            parameters.IsCompleted = bool.Parse(isCompleted);
+        }
+
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("sortDescending", out var sortDescending))
+        {
+            parameters.SortDescending = bool.Parse(sortDescending);
+        }
+
+        await LoadCategories();
+        await LoadTodos();
+    }
+}

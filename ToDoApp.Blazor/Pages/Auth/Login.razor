@@ -1,0 +1,74 @@
+﻿@page "/login"
+@using Microsoft.EntityFrameworkCore.Metadata.Internal
+@inject IApiClient ApiClient
+@inject IAuthClient AuthClient
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<AuthLayout Title="Logowanie">
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">
+            @errorMessage
+        </div>
+    }
+
+    <EditForm Model="@loginDto" OnValidSubmit="HandleLogin">
+        <DataAnnotationsValidator />
+        <div class="form-group mb-3">
+            <label>Email:</label>
+            <InputText @bind-Value="loginDto.Email" class="form-control" />
+            <ValidationMessage For="@(() => loginDto.Email)" />
+        </div>
+        <div class="form-group mb-3">
+            <label>Hasło:</label>
+            <InputText type="password" @bind-Value="loginDto.Password" class="form-control" />
+            <ValidationMessage For="@(() => loginDto.Password)" />
+        </div>
+        <button type="submit" class="btn btn-primary" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span> Logowanie...</span>
+            }
+            else
+            {
+                <span>Zaloguj</span>
+            }
+        </button>
+        <NavLink href="register" class="btn btn-link">Zarejestruj się</NavLink>
+    </EditForm>
+</AuthLayout>
+
+@code {
+    private LoginDto loginDto = new();
+    private string errorMessage;
+    private bool isLoading;
+
+    private async Task HandleLogin()
+    {
+        try
+        {
+            var result = await ApiClient.LoginAsync(loginDto);
+            if (result != null)
+            {
+                await AuthClient.SetTokensAsync(result.AccessToken, result.RefreshToken);
+                await AuthStateProvider.GetAuthenticationStateAsync();
+                NavigationManager.NavigateTo("/");
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = "Invalid credentials";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error while logging in. Try again later.";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+}

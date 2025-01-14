@@ -1,0 +1,59 @@
+﻿@page "/todo/{Id:guid}"
+@inject IApiClient ApiClient
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
+@attribute [Authorize]
+
+<div class="container mt-5">
+    @if (todo != null)
+    {
+        <div class="card">
+            <div class="card-header">
+                <h2>@todo.Title</h2>
+            </div>
+            <div class="card-body">
+                <p class="card-text">@todo.Description</p>
+                <p><strong>Deadline:</strong> @todo.Deadline?.ToString("g")</p>
+                <p><strong>Priority:</strong> @todo.Priority</p>
+                <p>
+                    <strong>Status:</strong>
+                    <span class="badge @(todo.IsCompleted ? "bg-success" : "bg-warning")">
+                        @(todo.IsCompleted ? "Completed" : "In Progress")
+                    </span>
+                </p>
+                <p><strong>Category:</strong> @todo.CategoryName</p>
+                <p><strong>Created At:</strong> @todo.CreatedAt.ToString("g")</p>
+                @if (todo.IsCompleted)
+                {
+                    <p><strong>Completed At:</strong> @todo.CompletedAt?.ToString("g")</p>
+                }
+            </div>
+            <div class="card-footer d-flex gap-2">
+                <NavLink href="@($"/todo/edit/{todo.Id}")" class="btn btn-sm btn-outline-secondary">Edit</NavLink>
+                <button @onclick="DeleteTodo" class="btn btn-sm btn-outline-danger">Delete</button>
+                <NavLink href="/" class="btn btn-sm btn-outline-primary">Back to List</NavLink>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private TodoDto todo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        todo = await ApiClient.GetTodoByIdAsync(Id);
+    }
+
+    private async Task DeleteTodo()
+    {
+        if (await JsRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this task?"))
+        {
+            await ApiClient.DeleteTodoAsync(Id);
+            NavigationManager.NavigateTo("/");
+        }
+    }
+}
