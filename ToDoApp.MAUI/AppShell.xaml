@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="ToDoApp.MAUI.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:ToDoApp.MAUI"
+    xmlns:todo="clr-namespace:ToDoApp.MAUI.Pages.Todo"
+    x:DataType="local:AppShell"
+    Shell.FlyoutBehavior="Disabled"
+    Title="Todo">
+
+    <Shell.ToolbarItems>
+        <ToolbarItem Text="Logout" 
+                     Command="{Binding LogoutCommand}"
+                     Order="Secondary"/>
+    </Shell.ToolbarItems>
+    
+    <ShellContent
+        Title="Todo List"
+        ContentTemplate="{DataTemplate todo:TodoListPage}"
+        Route="todolist" />
+
+</Shell>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:ToDoApp.MAUI.ViewModels.Todo"
+             xmlns:dto="clr-namespace:ToDoApp.Application.DTOs.Todo;assembly=ToDoApp.Application"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             x:Class="ToDoApp.MAUI.Pages.Todo.TodoListPage"
+             x:DataType="vm:TodoListViewModel"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto,*">
+        <Button Grid.Row="0"
+            Text="Dodaj zadanie"
+            Command="{Binding AddTodoCommand}"
+            Margin="5"
+            HorizontalOptions="End"/>
+        <RefreshView Grid.Row="1" 
+                 Command="{Binding InitializeCommand}"
+                 IsRefreshing="{Binding IsBusy}">
+            <CollectionView ItemsSource="{Binding Items}"
+                       RemainingItemsThreshold="1">
+                <CollectionView.Behaviors>
+                    <toolkit:EventToCommandBehavior
+                            EventName="RemainingItemsThresholdReached"
+                            Command="{Binding LoadMoreCommand}"/>
+                </CollectionView.Behaviors>
+
+                <CollectionView.Header>
+                    <Label Text="Twoje zadania" 
+                       StyleClass="HeaderStyle"/>
+                </CollectionView.Header>
+
+                <CollectionView.Footer>
+                    <ActivityIndicator IsVisible="{Binding IsLoadingMore}"
+                                 IsRunning="{Binding IsLoadingMore}"
+                                 Margin="0,10,0,10"/>
+                </CollectionView.Footer>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="dto:TodoDto">
+                        <SwipeView>
+                            <SwipeView.LeftItems>
+                                <SwipeItems>
+                                    <SwipeItem Text="Edit"
+                                                  Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TodoListViewModel}}, Path=EditTodoCommand}"
+                                                  CommandParameter="{Binding .}"
+                                                  BackgroundColor="Orange"/>
+                                    <SwipeItem Text="Delete"
+                                                  Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TodoListViewModel}}, Path=DeleteTodoCommand}"
+                                                  CommandParameter="{Binding .}"
+                                                  BackgroundColor="Red"/>
+                                </SwipeItems>
+                            </SwipeView.LeftItems>
+                            <Border Margin="5">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <VerticalStackLayout>
+                                        <Label Text="{Binding Title}" 
+                                           FontAttributes="Bold"/>
+                                        <Label Text="{Binding Description}"/>
+                                        <Label Text="{Binding Deadline, StringFormat='{0:d}'}"
+                                           TextColor="Gray"/>
+                                    </VerticalStackLayout>
+                                    <Label Grid.Column="1" 
+                                       Text="{Binding Priority}"
+                                       VerticalOptions="Center"/>
+                                </Grid>
+                            </Border>
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

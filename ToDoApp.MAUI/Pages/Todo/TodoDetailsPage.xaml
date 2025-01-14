@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ToDoApp.MAUI.Pages.Todo.TodoDetailsPage"
+             xmlns:vm="clr-namespace:ToDoApp.MAUI.ViewModels.Todo"
+             xmlns:enum="clr-namespace:ToDoApp.Domain.Enums;assembly=ToDoApp.Domain"
+             x:DataType="vm:TodoDetailsViewModel"
+             Title="{Binding Title}">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="10">
+            <Entry Text="{Binding Title}" 
+                   Placeholder="Tytuł"/>
+
+            <Editor Text="{Binding Description}" 
+                    Placeholder="Opis" 
+                    HeightRequest="100"/>
+
+            <DatePicker Date="{Binding Deadline}"
+                        Format="d"/>
+
+            <Picker Title="Priorytet"
+                    ItemsSource="{Binding Priorities}"
+                    SelectedItem="{Binding Priority}"/>
+
+            <Picker Title="Kategoria"
+                    ItemsSource="{Binding Categories}"
+                    ItemDisplayBinding="{Binding Name}"
+                    SelectedItem="{Binding SelectedCategory}"/>
+
+            <Button Text="Zapisz" 
+                    Command="{Binding SaveCommand}"/>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
